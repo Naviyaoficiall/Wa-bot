@@ -9,13 +9,13 @@
     "restart": "pm2 restart NAVIYA-MD"
   },
   "dependencies": {
-    "@whiskeysockets/baileys": "6.7.7",
+    "@whiskeysockets/baileys": "6.7.9",
     "@adiwajshing/keyed-db": "^0.2.4",
     "pino": "^7.0.5",
-    "pm2": "^5.2.0",
+    "pm2": "^5.4.3",
     "util": "^0.12.4",
     "express": "latest",
-    "axios": "^1.2.5",
+    "axios": "^1.7.9",
     "file_size_url": "^1.0.4",
     "fs-extra": "^11.1.0",
     "path": "^0.12.7",
