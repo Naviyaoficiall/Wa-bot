@@ -1,8 +1,4 @@
 const { cmd } = require('../command');
-const axios = require('axios');
-
-// Store last update time
-let lastUpdate = new Date();
 
 cmd({
     pattern: "news",
@@ -12,75 +8,49 @@ cmd({
     filename: __filename,
 }, async (conn, message, m, { args, reply }) => {
     try {
-        // Get current date and time in Sri Lanka time
+        // Get current time
         const now = new Date();
-        const sriLankaTime = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
-        const timeStr = sriLankaTime.toLocaleTimeString('si-LK');
+        const timeStr = now.toLocaleTimeString();
 
-        let newsMsg = `*📰 පුවත් අලුත්වීම් - ${timeStr}*\n\n`;
-
-        // Add latest news
-        const newsItems = await getLatestNews();
-        newsMsg += newsItems;
-
-        // Add footer
-        newsMsg += `\n📱 Auto-Updated News | By Naviya MD Bot`;
+        let newsMsg = `*📰 Latest News Updates*\n`;
+        newsMsg += `⏰ Time: ${timeStr}\n\n`;
         
-        await reply(newsMsg);
-        lastUpdate = now;
+        // Add static news content
+        newsMsg += await getNewsContent();
+        
+        // Simple text message without any external requests
+        await conn.sendMessage(message.key.remoteJid, { 
+            text: newsMsg,
+            quoted: message 
+        });
         
     } catch (error) {
         console.error("Error:", error);
-        await reply("❌ Error: " + error.message);
+        await reply("❌ Error sending news");
     }
 });
 
-async function getLatestNews() {
-    // Simulated news with frequent updates
-    const newsTypes = [
-        {
-            titles: [
-                "රට පුරා වැසි තත්වය - කාලගුණ දෙපාර්තමේන්තුව අනතුරු අඟවයි",
-                "දිවයිනේ විවිධ ප්‍රදේශවල තද වැසි",
-                "නිරිතදිග මෝසම් වැසි තත්වය ඉදිරි දින කිහිපයේදී",
-            ],
-            source: "කාලගුණ දෙපාර්තමේන්තුව"
-        },
-        {
-            titles: [
-                "නව අධ්‍යාපන ප්‍රතිසංස්කරණ යෝජනා",
-                "පාසල් විභාග ප්‍රතිඵල නිකුත් කෙරේ",
-                "අධ්‍යාපන ක්ෂේත්‍රයේ නව වැඩපිළිවෙล"
-            ],
-            source: "අධ්‍යාපන අමාත්‍යාංශය"
-        },
-        {
-            titles: [
-                "ක්‍රිකට් කණ්ඩායම ජයග්‍රහණය කරයි",
-                "නව ක්‍රීඩා පුහුණු මධ්‍යස්ථාන විවෘත කෙරේ",
-                "ජාතික ක්‍රීඩා උළෙල ඉදිරියේදී"
-            ],
-            source: "ක්‍රීඩා අමාත්‍යාංශය"
-        }
+// Simple news generator function
+function getNewsContent() {
+    const news = [
+        "*1. තාක්ෂණික පුවත්*\n" +
+        "🔹 නව තාක්ෂණික සංවර්ධන\n" +
+        "🔹 AI තාක්ෂණයේ දියුණුව\n\n",
+        
+        "*2. ක්‍රීඩා පුවත්*\n" +
+        "🔹 ක්‍රිකට් තරඟ ප්‍රතිඵල\n" +
+        "🔹 ක්‍රීඩා පුහුණු වැඩසටහන්\n\n",
+        
+        "*3. දේශීය පුවත්*\n" +
+        "🔹 ආර්ථික සංවර්ධන වැඩසටහන්\n" +
+        "🔹 නව ව්‍යාපෘති ආරම්භය\n\n"
     ];
-
-    let newsText = "";
-    const currentMinute = new Date().getMinutes();
     
-    // Select different news based on current time
-    for(let i = 0; i < 3; i++) {
-        const newsType = newsTypes[i];
-        const titleIndex = (currentMinute + i) % newsType.titles.length;
-        newsText += `*${i + 1}. ${newsType.titles[titleIndex]}*\n`;
-        newsText += `⏰ යාවත්කාලීන කළේ: දැන්\n`;
-        newsText += `🔖 මූලාශ්‍රය: ${newsType.source}\n\n`;
-    }
-
-    return newsText;
+    return news.join('') + "\n📱 Powered by Naviya MD Bot";
 }
 
-// Auto-update variables
-let autoUpdateInterval;
+// Auto update command
+let updateInterval;
 
 cmd({
     pattern: "autostart",
@@ -89,31 +59,27 @@ cmd({
     filename: __filename,
 }, async (conn, message, m, { reply }) => {
     try {
-        if (autoUpdateInterval) {
-            return await reply("❌ Auto updates දැනටමත් ක්‍රියාත්මකයි!");
+        if (updateInterval) {
+            return await reply("⚠️ Auto updates already running!");
         }
 
-        // Update every 1 minute
-        autoUpdateInterval = setInterval(async () => {
+        updateInterval = setInterval(async () => {
             try {
-                const now = new Date();
-                const sriLankaTime = new Date(now.getTime() + (5.5 * 60 * 60 * 1000));
-                const timeStr = sriLankaTime.toLocaleTimeString('si-LK');
-                
-                let newsMsg = `*📰 පුවත් අලුත්වීම් - ${timeStr}*\n\n`;
-                newsMsg += await getLatestNews();
-                newsMsg += `\n📱 Auto-Updated News | By Naviya MD Bot`;
-                
-                await conn.sendMessage(message.key.remoteJid, { text: newsMsg });
-            } catch (error) {
-                console.error("Auto update error:", error);
+                const newsMsg = `*📰 Auto News Update*\n\n${await getNewsContent()}`;
+                await conn.sendMessage(message.key.remoteJid, { 
+                    text: newsMsg,
+                    quoted: message 
+                });
+            } catch (err) {
+                console.error("Auto update error:", err);
             }
-        }, 60 * 1000); // 1 minute interval
+        }, 60000); // 1 minute
 
-        await reply("✅ Auto news updates ආරම්භ විය! හැම විනාඩියකටම update වේ.");
+        await reply("✅ Auto news started! Updates every minute");
+        
     } catch (error) {
         console.error("Error:", error);
-        await reply("❌ Error: " + error.message);
+        await reply("❌ Error starting auto updates");
     }
 });
 
@@ -124,15 +90,16 @@ cmd({
     filename: __filename,
 }, async (conn, message, m, { reply }) => {
     try {
-        if (!autoUpdateInterval) {
-            return await reply("❌ Auto updates ක්‍රියාත්මක නැත!");
+        if (!updateInterval) {
+            return await reply("⚠️ No auto updates running!");
         }
 
-        clearInterval(autoUpdateInterval);
-        autoUpdateInterval = null;
-        await reply("✅ Auto news updates නතර විය!");
+        clearInterval(updateInterval);
+        updateInterval = null;
+        await reply("✅ Auto news stopped!");
+        
     } catch (error) {
         console.error("Error:", error);
-        await reply("❌ Error: " + error.message);
+        await reply("❌ Error stopping auto updates");
     }
 });
