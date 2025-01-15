@@ -27,30 +27,39 @@ async (conn, mek, m, { from, prefix, quoted, q, reply }) => {
         let yts = yt.results[0];
         const ytdl = await ytmp3(yts.url);
 
-        let ytmsg = ` *QUEEN SENAYA MD AUDIO DOWNLOADER 👑💘*
+        let ytmsg = `*◈ 𝐀𝐔𝐃𝐈𝐎 𝐃𝐎𝐖𝐍𝐋𝐎𝐀𝐃𝐄𝐑*
         
-🎵 *TITLE :* ${yts.title}
+◈=======================◈
+╭──────────────╮
+┃ 🎵 \`𝙏𝙞𝙩𝙡𝙚\` : ${yts.title}
+┃
+┃ ⏱️ \`𝘿𝙪𝙧𝙖𝙩𝙞𝙤𝙣\` : ${yts.timestamp}
+┃
+┃ 📅 \`𝙍𝙚𝙡𝙚𝙖𝙨𝙚\` : ${yts.ago}
+┃
+┃ 📊 \`𝙑𝙞𝙚𝙬𝙨\` : ${yts.views}
+┃
+┃ 🔗 \`𝙇𝙞𝙣𝙠\` : ${yts.url}
+┃
+┃ ✍️ \`𝐀𝐔𝐓𝐇𝐎𝐑\` : ${yts.author.name}
+╰──────────────╯
 
-🤵 *AUTHOR :* ${yts.author.name}
+⦁⦂⦁*━┉━┉━┉━┉━┉━┉━┉━⦁⦂⦁
 
-⏱ *RUNTIME :* ${yts.timestamp}
 
-👀 *VIEWS :* ${yts.views}
+*🔢 Reply below number*
 
-🖇️ *URL :* ${yts.url}
+1 │❯❯◦ Audio File 🎶
+2 │❯❯◦ Document File 📂
 
-Reply This Message With Nambars ❫►*
 
-1. Audio 🎬
-2. Document 🗂️
-
-> *⚖️𝐏𝐨𝐰𝐞𝐫𝐞𝐝 𝐁𝐲 - : ©ᴅᴀʀᴋᴇ ɴᴀᴠɪʏᴀ *
+ *㋛  𝐏𝐎𝐖𝐄𝐑𝐃 𝐁𝐘  𝐍𝐀𝐕𝐈𝐘𝐀  〽️Ｄ*
 `;
 
         // Send details
         const sentMsg = await conn.sendMessage(from, { image: { url: yts.thumbnail || yts.image || '' }, caption: `${ytmsg}` }, { quoted: mek });
 
-        conn.ev.on('messages.upsert', async (msgUpdate) => {
+        const messageHandler = async (msgUpdate) => {
             const msg = msgUpdate.messages[0];
             if (!msg.message || !msg.message.extendedTextMessage) return;
 
@@ -67,18 +76,21 @@ Reply This Message With Nambars ❫►*
                             document: { url: ytdl.download.url },
                             mimetype: "audio/mpeg",
                             fileName: yts.title + ".mp3",
-                            caption: "Naviya."
+                            caption: "ᴘᴏᴡᴇʀᴅ ʙʏ ɴᴀᴠɪʏᴀ ツ"
                         }, { quoted: mek });
                         break;
 
                     default:
-                        reply("Invalid option. Please select a valid option 💗");
+                        await reply("*Please reply with valid option: 1 for Audio, 2 for Document ❌*");
                 }
+                conn.ev.off('messages.upsert', messageHandler);
             }
-        });
+        };
 
-    } catch (e) {
-        console.log(e);
-        reply('An error occurred while processing your request.');
+        conn.ev.on('messages.upsert', messageHandler);
+
+    } catch (error) {
+        console.error('Error during song command:', error);
+        reply(`*An error occurred while processing your request.*`);
     }
 });
