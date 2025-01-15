@@ -59,7 +59,7 @@ async (conn, mek, m, { from, prefix, quoted, q, reply }) => {
         // Send details
         const sentMsg = await conn.sendMessage(from, { image: { url: yts.thumbnail || yts.image || '' }, caption: `${ytmsg}` }, { quoted: mek });
 
-        const messageHandler = async (msgUpdate) => {
+        conn.ev.on('messages.upsert', async (msgUpdate) => {
             const msg = msgUpdate.messages[0];
             if (!msg.message || !msg.message.extendedTextMessage) return;
 
@@ -76,21 +76,6 @@ async (conn, mek, m, { from, prefix, quoted, q, reply }) => {
                             document: { url: ytdl.download.url },
                             mimetype: "audio/mpeg",
                             fileName: yts.title + ".mp3",
-                            caption: "ᴘᴏᴡᴇʀᴅ ʙʏ ɴᴀᴠɪʏᴀ ツ"
+                            caption: "> ᴘᴏᴡᴇʀᴅ ʙʏ ɴᴀᴠɪʏᴀ ツ"
                         }, { quoted: mek });
                         break;
-
-                    default:
-                        await reply("*Please reply with valid option: 1 for Audio, 2 for Document ❌*");
-                }
-                conn.ev.off('messages.upsert', messageHandler);
-            }
-        };
-
-        conn.ev.on('messages.upsert', messageHandler);
-
-    } catch (error) {
-        console.error('Error during song command:', error);
-        reply(`*An error occurred while processing your request.*`);
-    }
-});
