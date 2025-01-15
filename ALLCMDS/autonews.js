@@ -1,65 +1,79 @@
 const { cmd } = require('../command');
+const axios = require('axios');
+const cheerio = require('cheerio');
 
-// Rest of the news database remains same...
+async function scrapeHiruNews() {
+    try {
+        const response = await axios.get('https://www.hirunews.lk/sinhala/', {
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            }
+        });
 
-function getRotatingNews(username) {
-    const now = new Date();
-    const sriLankaTime = new Date(now.getTime() + (5.5 * 60 * 60 * 1000)); // Convert to Sri Lanka time
-    newsIndex = (newsIndex + 1) % 5;
-    
-    let newsMsg = `*📰 NAVIYA NEWS UPDATE*\n`;
-    newsMsg += `➖➖➖➖➖➖➖➖➖➖➖\n\n`;
-    
-    // Add personalized header
-    newsMsg += `👋 Welcome, *${username}*!\n`;
-    newsMsg += `🗓️ ${sriLankaTime.toLocaleDateString()}\n`;
-    newsMsg += `⏰ ${sriLankaTime.toLocaleTimeString()}\n\n`;
-    
-    newsMsg += `*🌟 TODAY'S HEADLINES*\n`;
-    newsMsg += `➖➖➖➖➖➖➖➖➖➖➖\n\n`;
-    
-    newsMsg += `*💻 තාක්ෂණික පුවත්*\n`;
-    newsMsg += `• ${newsDatabase.tech[newsIndex]}\n\n`;
-    
-    newsMsg += `*⚽ ක්‍රීඩා පුවත්*\n`;
-    newsMsg += `• ${newsDatabase.sports[newsIndex]}\n\n`;
-    
-    newsMsg += `*🏛️ දේශීය පුවත්*\n`;
-    newsMsg += `• ${newsDatabase.local[newsIndex]}\n\n`;
-    
-    newsMsg += `*💹 ව්‍යාපාරික පුවත්*\n`;
-    newsMsg += `• ${newsDatabase.business[newsIndex]}\n\n`;
-    
-    newsMsg += `➖➖➖➖➖➖➖➖➖➖➖\n`;
-    newsMsg += `📱 Powered by *NAVIYA MD*\n`;
-    newsMsg += `🔄 Auto-Updated News Service\n`;
-    newsMsg += `👨‍💻 Created by: ${username}`;
-    
-    return newsMsg;
+        const $ = cheerio.load(response.data);
+        const news = [];
+
+        // Scrape latest news
+        $('.main-news').each((i, element) => {
+            if (i < 4) { // Get top 4 news
+                const title = $(element).find('.main-news-heading').text().trim();
+                const time = $(element).find('.time').text().trim();
+                news.push({ title, time });
+            }
+        });
+
+        return news;
+    } catch (error) {
+        console.error('Scraping error:', error);
+        return null;
+    }
 }
 
 cmd({
     pattern: "news",
-    desc: "Get latest news updates",
+    desc: "Get latest Hiru news",
     category: "news",
     react: "📰",
     filename: __filename,
 }, async (conn, message, m, { reply }) => {
     try {
-        const username = message.pushName || "User"; // Get user's name
+        // Send initial message
+        await reply("🔄 පුවත් ලබාගනිමින්... කරුණාකර රැඳී සිටින්න.");
+
+        // Scrape news
+        const news = await scrapeHiruNews();
+        
+        if (!news) {
+            return await reply("❌ පුවත් ලබාගැනීමට නොහැකි විය. පසුව උත්සාහ කරන්න.");
+        }
+
+        // Format news message
+        let newsMsg = `*📰 හිරු පුවත් - LIVE UPDATE*\n`;
+        newsMsg += `➖➖➖➖➖➖➖➖➖➖➖\n\n`;
+
+        news.forEach((item, index) => {
+            newsMsg += `*${index + 1}. ${item.title}*\n`;
+            newsMsg += `⏰ ${item.time}\n\n`;
+        });
+
+        newsMsg += `➖➖➖➖➖➖➖➖➖➖➖\n`;
+        newsMsg += `📱 Powered by: NAVIYA MD\n`;
+        newsMsg += `⚡ User: ${message.pushName}\n`;
+        newsMsg += `🕐 Updated: ${new Date().toLocaleTimeString()}`;
+
         await conn.sendMessage(message.key.remoteJid, { 
-            text: getRotatingNews(username),
+            text: newsMsg,
             quoted: message 
         });
+
     } catch (error) {
         console.error("Error:", error);
-        await reply("❌ පුවත් ලබාගැනීමේ දෝෂයක් ඇති විය");
+        await reply("❌ Error fetching news");
     }
 });
 
-// Auto update command
+// Auto update variable
 let updateInterval;
-let startTime;
 
 cmd({
     pattern: "autostart",
@@ -69,29 +83,37 @@ cmd({
 }, async (conn, message, m, { reply }) => {
     try {
         if (updateInterval) {
-            return await reply("⚠️ Auto-updates already running!");
+            return await reply("⚠️ Auto updates දැනටමත් ක්‍රියාත්මකයි!");
         }
-
-        startTime = new Date();
-        const username = message.pushName || "User";
 
         updateInterval = setInterval(async () => {
             try {
-                await conn.sendMessage(message.key.remoteJid, { 
-                    text: getRotatingNews(username),
-                    quoted: message 
-                });
+                const news = await scrapeHiruNews();
+                if (news) {
+                    let newsMsg = `*📰 හිරු පුවත් - AUTO UPDATE*\n`;
+                    newsMsg += `➖➖➖➖➖➖➖➖➖➖➖\n\n`;
+
+                    news.forEach((item, index) => {
+                        newsMsg += `*${index + 1}. ${item.title}*\n`;
+                        newsMsg += `⏰ ${item.time}\n\n`;
+                    });
+
+                    newsMsg += `➖➖➖➖➖➖➖➖➖➖➖\n`;
+                    newsMsg += `📱 Powered by: NAVIYA MD\n`;
+                    newsMsg += `⚡ Auto Update System`;
+
+                    await conn.sendMessage(message.key.remoteJid, { 
+                        text: newsMsg,
+                        quoted: message 
+                    });
+                }
             } catch (err) {
                 console.error("Auto update error:", err);
             }
-        }, 60000);
+        }, 60000); // Every 1 minute
 
-        await reply(`*📰 NAVIYA NEWS AUTO-UPDATE*\n\n` +
-                   `✅ Status: Active\n` +
-                   `👤 User: ${username}\n` +
-                   `⏱️ Interval: 60 seconds\n` +
-                   `🕐 Started: ${startTime.toLocaleTimeString()}`);
-        
+        await reply("✅ Real-time news updates started!");
+
     } catch (error) {
         console.error("Error:", error);
         await reply("❌ Error starting auto updates");
@@ -106,21 +128,13 @@ cmd({
 }, async (conn, message, m, { reply }) => {
     try {
         if (!updateInterval) {
-            return await reply("⚠️ No auto-updates running!");
+            return await reply("⚠️ No auto updates running!");
         }
 
         clearInterval(updateInterval);
         updateInterval = null;
-        
-        const runTime = Math.round((new Date() - startTime) / 1000);
-        const username = message.pushName || "User";
+        await reply("✅ News auto updates stopped!");
 
-        await reply(`*📰 NAVIYA NEWS AUTO-UPDATE*\n\n` +
-                   `❌ Status: Stopped\n` +
-                   `👤 User: ${username}\n` +
-                   `⏱️ Run Time: ${runTime} seconds\n` +
-                   `🕐 Stopped: ${new Date().toLocaleTimeString()}`);
-        
     } catch (error) {
         console.error("Error:", error);
         await reply("❌ Error stopping auto updates");
