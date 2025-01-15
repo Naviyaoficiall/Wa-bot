@@ -74,6 +74,9 @@ Example: .news stop 1234567890@g.us
                 activeSubscriptions.set(groupJid, {
                     schedule: schedule,
                     startTime: new Date().toISOString()
+                }                activeSubscriptions.set(groupJid, {
+                    schedule: schedule,
+                    startTime: new Date().toISOString()
                 });
 
                 // Initialize last sent news for this group
