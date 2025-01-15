@@ -60,3 +60,4 @@ async (conn, message, m, { from, quoted, body, isCmd, command, args, q, isGroup,
         reply(`*An error occurred while processing your request.*`);
     }
 });
+
