@@ -79,3 +79,15 @@ async (conn, mek, m, { from, prefix, quoted, q, reply }) => {
                             caption: "> ᴘᴏᴡᴇʀᴅ ʙʏ ɴᴀᴠɪʏᴀ ツ"
                         }, { quoted: mek });
                         break;
+
+                    default:
+                        reply("Invalid option. Please select a valid option 💗");
+                }
+            }
+        });
+
+    } catch (e) {
+        console.log(e);
+        reply('An error occurred while processing your request.');
+    }
+});
