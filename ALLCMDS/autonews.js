@@ -94,53 +94,58 @@ Example: .news stop 1234567890@g.us
 
 async function sendSinhalaNews(conn, groupJid) {
     try {
-        const response = await axios.get('https://sinhala.newsfirst.lk/latest-news');
-        const $ = cheerio.load(response.data);
+        console.log('Attempting to fetch news...');  // Debug log
+        const response = await axios.get('https://sinhala.newsfirst.lk/latest-news', {
+            timeout: 10000,  // 10 second timeout
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+        });
         
-        const previousNews = lastSentNews.get(groupJid) || new Set();
-        let newNewsFound = false;
+        console.log('News fetch response status:', response.status);  // Debug log
+        
+        const $ = cheerio.load(response.data);
+        let newsFound = false;
         let newsMessage = '*📰 නවතම පුවත් - Newsfirst*\n\n';
-
-        // Extract news from the website
-        const newsItems = [];
+        
         $('.news-story').each((index, element) => {
+            if (index >= 5) return false;  // Only get top 5 news
+            
             const title = $(element).find('.news-story__title').text().trim();
             const time = $(element).find('.news-story__time').text().trim();
             const link = $(element).find('a').attr('href');
-
-            if (title && link && !previousNews.has(title)) {
-                newsItems.push({ title, time, link });
-                previousNews.add(title);
-                newNewsFound = true;
+            
+            if (title && link) {
+                newsFound = true;
+                newsMessage += `*${index + 1}. ${title}*\n`;
+                newsMessage += `⏰ ${time}\n`;
+                newsMessage += `🔗 ${link}\n\n`;
+                console.log(`Found news: ${title}`);  // Debug log
             }
         });
-
-        // Keep only the latest 20 news titles in memory
-        if (previousNews.size > 20) {
-            const newsArray = Array.from(previousNews);
-            const newSet = new Set(newsArray.slice(newsArray.length - 20));
-            lastSentNews.set(groupJid, newSet);
+        
+        if (!newsFound) {
+            console.log('No news items found on the page');  // Debug log
+            throw new Error('No news found');
         }
 
-        // If new news found, send them
-        if (newNewsFound) {
-            newsItems.slice(0, 5).forEach((news, index) => {
-                newsMessage += `*${index + 1}. ${news.title}*\n`;
-                newsMessage += `⏰ ${news.time}\n`;
-                newsMessage += `🔗 ${news.link}\n\n`;
-            });
-
-            newsMessage += '\n📱 Powered by Newsfirst Sinhala';
-
-            await conn.sendMessage(groupJid, {
-                text: newsMessage,
-                linkPreview: true
-            });
-        }
-    } catch (error) {
-        console.error('Error fetching news:', error);
+        newsMessage += '\n📱 Powered by Newsfirst Sinhala';
+        
+        console.log('Sending news to group:', groupJid);  // Debug log
+        
         await conn.sendMessage(groupJid, {
-            text: '⚠️ පුවත් ලබා ගැනීමට නොහැකි විය. පසුව නැවත උත්සාහ කරනු ඇත.'
+            text: newsMessage,
+            linkPreview: true
+        });
+        
+        console.log('News sent successfully');  // Debug log
+        
+    } catch (error) {
+        console.error('Error in sendSinhalaNews:', error.message);  // Detailed error log
+        console.error('Full error:', error);  // Full error stack
+        
+        await conn.sendMessage(groupJid, {
+            text: '⚠️ පුවත් ලබා ගැනීමට නොහැකි විය. Error: ' + error.message
         });
     }
-  }
+                }
