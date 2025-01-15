@@ -1,11 +1,9 @@
-const puppeteer = require("puppeteer");
-const { cmd } = require('../command');
+const { cmd } = require('../command'); // Command handler
 const axios = require("axios");
-const fs = require("fs");
-const path = require("path");
+const cheerio = require("cheerio");
 
 cmd({
-    pattern: "movie",
+    pattern: "mv",
     desc: "Search and download movies",
     category: "scraper",
     filename: __filename,
@@ -23,65 +21,53 @@ cmd({
         const movieName = q.trim();
         await reply("⏳ Searching for the movie, please wait...");
 
-        // Launch Puppeteer
-        const browser = await puppeteer.launch({ headless: true });
-        const page = await browser.newPage();
-        await page.goto("https://sinhalasub.lk/movies/");
+        // Fetch the website and search for the movie
+        const searchUrl = `https://sinhalasub.lk/movies/?s=${encodeURIComponent(movieName)}`;
+        const { data: searchPage } = await axios.get(searchUrl);
+        const $ = cheerio.load(searchPage);
 
-        // Search for the movie
-        await page.type('input[name="s"]', movieName); // Adjust selector for search bar
-        await page.keyboard.press("Enter");
-        await page.waitForTimeout(3000); // Wait for results to load
-
-        // Scrape first search result
-        const movieDetails = await page.evaluate(() => {
-            const firstResult = document.querySelector(".post-title a"); // Selector for first movie link
-            if (firstResult) {
-                return {
-                    title: firstResult.innerText.trim(),
-                    link: firstResult.href,
-                };
-            }
-            return null;
-        });
-
-        if (!movieDetails) {
-            await browser.close();
+        // Scrape the first search result
+        const firstResult = $(".post-title a").first();
+        if (!firstResult.length) {
             return reply(`❌ *No results found for:* ${movieName}`);
         }
 
-        // Navigate to the movie details page
-        await page.goto(movieDetails.link);
+        const movieTitle = firstResult.text().trim();
+        const movieLink = firstResult.attr("href");
 
-        // Scrape details and download link
-        const fullDetails = await page.evaluate(() => {
-            const title = document.querySelector(".post-title")?.innerText.trim() || "N/A";
-            const thumbnail = document.querySelector(".post-thumbnail img")?.src || null; // Thumbnail URL
-            const description = document.querySelector(".post-content p")?.innerText.trim() || "Description not available";
-            const downloadLinks = Array.from(document.querySelectorAll(".wp-block-button__link")).map(el => ({
-                text: el.innerText.trim(),
-                link: el.href,
-            })) || [];
+        // Fetch the movie details page
+        const { data: moviePage } = await axios.get(movieLink);
+        const $$ = cheerio.load(moviePage);
 
-            return { title, thumbnail, description, downloadLinks };
+        // Extract movie details
+        const title = $$(".post-title").text().trim() || "N/A";
+        const thumbnail = $$(".post-thumbnail img").attr("src") || null; // Thumbnail URL
+        const description = $$(".post-content p").first().text().trim() || "Description not available";
+
+        // Extract download links
+        const downloadLinks = [];
+        $$(".wp-block-button__link").each((i, el) => {
+            downloadLinks.push({
+                text: $(el).text().trim(),
+                link: $(el).attr("href"),
+            });
         });
 
-        if (!fullDetails.downloadLinks.length) {
-            await browser.close();
+        if (!downloadLinks.length) {
             return reply(`❌ No download links available for: *${movieName}*`);
         }
 
         // Display movie details and ask for confirmation
         let detailsMessage = `🎥 *Movie Found!*\n\n` +
-            `📌 *Title:* ${fullDetails.title}\n` +
-            `📝 *Description:* ${fullDetails.description}\n\n` +
+            `📌 *Title:* ${title}\n` +
+            `📝 *Description:* ${description}\n\n` +
             `🌐 *Available Downloads:*\n` +
-            fullDetails.downloadLinks.map((link, index) => `🔹 ${index + 1}. ${link.text}`).join("\n") +
+            downloadLinks.map((link, index) => `🔹 ${index + 1}. ${link.text}`).join("\n") +
             `\n\n> Reply *yes* to download the best quality available.`;
 
         // Send the thumbnail and details
         await conn.sendMessage(m.chat, {
-            image: { url: fullDetails.thumbnail },
+            image: { url: thumbnail },
             caption: detailsMessage,
         }, { quoted: m });
 
@@ -92,42 +78,21 @@ cmd({
                 await reply("📥 Downloading the movie, please wait...");
 
                 // Select the first available download link
-                const bestLink = fullDetails.downloadLinks[0];
+                const bestLink = downloadLinks[0];
                 const downloadUrl = bestLink.link;
 
-                // Download the movie file
-                const filePath = path.resolve(__dirname, `${fullDetails.title.replace(/[^a-zA-Z0-9]/g, "_")}.mp4`);
-                const writer = fs.createWriteStream(filePath);
-
-                const response = await axios({
-                    url: downloadUrl,
-                    method: "GET",
-                    responseType: "stream",
-                });
-
-                response.data.pipe(writer);
-
-                await new Promise((resolve, reject) => {
-                    writer.on("finish", resolve);
-                    writer.on("error", reject);
-                });
-
-                // Send the movie file
+                // Send the download link as a message
                 await conn.sendMessage(m.chat, {
-                    video: { url: filePath },
-                    caption: `🎥 *Title:* ${fullDetails.title}\n\n> Powered by SinhalaSub.lk`,
-                    thumbnail: { url: fullDetails.thumbnail },
+                    text: `🎥 *Title:* ${title}\n` +
+                          `📥 *Download Link:* ${downloadUrl}\n\n` +
+                          `> Powered by SinhalaSub.lk`,
                 }, { quoted: m });
 
-                // Clean up the file
-                fs.unlinkSync(filePath);
-                await reply("✅ Movie downloaded and sent successfully!");
+                await reply("✅ Download link sent successfully!");
             } else {
                 await reply("❌ Download cancelled.");
             }
         });
-
-        await browser.close();
     } catch (error) {
         console.error("Error in movie command:", error);
         reply("❌ An error occurred while processing your request. Please try again later.");
