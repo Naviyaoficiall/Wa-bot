@@ -33,7 +33,8 @@
     "mrnima-moviedl": "1.0.0",
     "puppeteer": "latest",
     "cheerio": "latest",
-    "nayan-videos-downloader": "^0.1.3"
+    "nayan-videos-downloader": "^0.1.3",
+    "node-cron": "^3.0.3"
   }
 }
 
