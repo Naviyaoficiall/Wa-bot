@@ -31,7 +31,8 @@
     "@dark-yasiya/yt-dl.js": "latest",
     "@blackamda/telegram-image-url": "^1.0.0",
     "mrnima-moviedl": "1.0.0",
-    "puppeteer": "latest"
+    "puppeteer": "latest",
+    "cheerio": "latest"
   }
 }
 
