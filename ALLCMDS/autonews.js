@@ -3,37 +3,26 @@ const axios = require('axios');
 const cheerio = require('cheerio');
 const cron = require('node-cron');
 
-// Store active news subscriptions with group JIDs
+// Store active subscriptions
 const activeSubscriptions = new Map();
-
-// Store last sent news to avoid duplicates
-const lastSentNews = new Map();
 
 cmd({
     pattern: "news",
-    desc: "Get latest Sinhala news updates from Newsfirst automatically",
+    desc: "Get latest Sinhala news updates",
     category: "news",
     react: "📰",
     filename: __filename,
-    use: ".news start/stop/list"
 }, async (conn, message, m, { args, reply }) => {
     try {
+        // First, send reaction to show command is received
+        await conn.sendMessage(message.key.remoteJid, { react: { text: "📰", key: message.key }});
+
         if (!args[0]) {
-            return await reply(`*📰 Sinhala News Command Usage*
-
-🔸 Start news updates:
-  .news start
-
-🔸 Stop news updates:
-  .news stop
-
-🔸 Check active subscriptions:
-  .news list
-
-🔸 Get news once:
-  .news now
-
-⏰ News updates every 2 minutes.`);
+            return await reply(`*📰 Sinhala News Command*\n\n` +
+                `🔸 To start: .news start\n` +
+                `🔸 To stop: .news stop\n` +
+                `🔸 Test news: .news test\n\n` +
+                `Updates every 2 minutes.`);
         }
 
         const command = args[0].toLowerCase();
@@ -41,149 +30,84 @@ cmd({
 
         switch (command) {
             case 'start':
+                // Check if it's a group
                 if (!groupJid.endsWith('@g.us')) {
-                    return await reply('❌ This command can only be used in groups!');
+                    return await reply('❌ Groups only!');
                 }
 
+                // Check if already active
                 if (activeSubscriptions.has(groupJid)) {
-                    return await reply('📰 News updates are already active in this group!');
+                    return await reply('📰 Already active in this group!');
                 }
 
-                // Schedule news updates every 2 minutes
-                const schedule = cron.schedule('*/2 * * * *', async () => {
-                    await sendSinhalaNews(conn, groupJid);
-                });
+                try {
+                    // Test fetch news first
+                    await testNewsFunction(conn, groupJid);
 
-                activeSubscriptions.set(groupJid, {
-                    schedule: schedule,
-                    startTime: new Date().toISOString()
-                });
+                    // If test successful, setup cron
+                    const schedule = cron.schedule('*/2 * * * *', async () => {
+                        await testNewsFunction(conn, groupJid);
+                    });
 
-                // Initialize last sent news for this group
-                lastSentNews.set(groupJid, new Set());
+                    activeSubscriptions.set(groupJid, schedule);
+                    await reply('✅ News updates started! Testing first news...');
 
-                // Send first news immediately
-                await sendSinhalaNews(conn, groupJid);
-                await reply('✅ News updates activated! You will receive updates every 2 minutes.');
+                } catch (err) {
+                    console.error('Start error:', err);
+                    await reply('❌ Error starting news: ' + err.message);
+                }
                 break;
 
             case 'stop':
-                if (!activeSubscriptions.has(groupJid)) {
-                    return await reply('❌ No active news subscription in this group!');
+                const schedule = activeSubscriptions.get(groupJid);
+                if (!schedule) {
+                    return await reply('❌ No active news in this group!');
                 }
-
-                const subscription = activeSubscriptions.get(groupJid);
-                subscription.schedule.stop();
+                schedule.stop();
                 activeSubscriptions.delete(groupJid);
-                lastSentNews.delete(groupJid);
-
-                await reply('🛑 News updates have been stopped.');
+                await reply('🛑 News updates stopped.');
                 break;
 
-            case 'list':
-                if (activeSubscriptions.size === 0) {
-                    return await reply('❌ No active news subscriptions.');
-                }
-
-                let subscriptionList = '*📰 Active News Subscriptions*\n\n';
-                for (const [gid, data] of activeSubscriptions) {
-                    try {
-                        const groupMetadata = await conn.groupMetadata(gid);
-                        subscriptionList += `Group: ${groupMetadata.subject}\n`;
-                        subscriptionList += `Started: ${data.startTime}\n\n`;
-                    } catch (error) {
-                        subscriptionList += `Group JID: ${gid}\n`;
-                        subscriptionList += `Started: ${data.startTime}\n\n`;
-                    }
-                }
-                await reply(subscriptionList);
-                break;
-
-            case 'now':
-                await sendSinhalaNews(conn, groupJid);
+            case 'test':
+                await reply('🔄 Testing news fetch...');
+                await testNewsFunction(conn, groupJid);
                 break;
 
             default:
-                await reply('❌ Invalid command. Use start, stop, list, or now.');
+                await reply('❌ Invalid command! Use start/stop/test');
         }
 
     } catch (error) {
-        console.error('Error in news command:', error);
-        await reply('⚠️ An error occurred while processing the command.');
+        console.error('Main command error:', error);
+        await reply('⚠️ Error: ' + error.message);
     }
 });
 
-async function sendSinhalaNews(conn, groupJid) {
+async function testNewsFunction(conn, groupJid) {
     try {
-        console.log('Fetching news from Newsfirst...');
+        // Test message to confirm function is running
+        await conn.sendMessage(groupJid, { text: '🔄 Fetching latest news...' });
+
+        // Prepare news message
+        let newsMessage = '*📰 ශ්‍රී ලංකා පුවත් - News*\n\n';
         
-        const response = await axios.get('https://sinhala.newsfirst.lk/latest-news', {
-            timeout: 15000,
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-            }
-        });
+        // Add some test news (we'll replace this with real news fetching later)
+        newsMessage += `*1. Test News Title*\n`;
+        newsMessage += `⏰ Just now\n`;
+        newsMessage += `🔗 https://example.com\n\n`;
 
-        const $ = cheerio.load(response.data);
-        const previousNews = lastSentNews.get(groupJid) || new Set();
-        let newNewsFound = false;
-        let newsMessage = '*📰 නවතම පුවත් - Newsfirst*\n\n';
-
-        // Try multiple selectors to find news items
-        const newsItems = [];
-        $('article, .article, .news-item, .post').each((index, element) => {
-            const title = $(element).find('h1, h2, h3, .title').first().text().trim();
-            const time = $(element).find('.time, .date, time').first().text().trim();
-            let link = $(element).find('a').first().attr('href');
-
-            if (title && link && !previousNews.has(title)) {
-                // Make sure link is absolute URL
-                if (!link.startsWith('http')) {
-                    link = `https://sinhala.newsfirst.lk${link}`;
-                }
-
-                newsItems.push({ title, time, link });
-                previousNews.add(title);
-                newNewsFound = true;
-            }
-        });
-
-        // Keep only the latest 20 news titles in memory
-        if (previousNews.size > 20) {
-            const newsArray = Array.from(previousNews);
-            lastSentNews.set(groupJid, new Set(newsArray.slice(newsArray.length - 20)));
-        }
-
-        // If new news found, send them
-        if (newNewsFound) {
-            newsItems.slice(0, 5).forEach((news, index) => {
-                newsMessage += `*${index + 1}. ${news.title}*\n`;
-                if (news.time) newsMessage += `⏰ ${news.time}\n`;
-                newsMessage += `🔗 ${news.link}\n\n`;
-            });
-
-            newsMessage += '\n📱 Powered by Newsfirst Sinhala';
-
-            await conn.sendMessage(groupJid, {
-                text: newsMessage,
-                linkPreview: true
-            });
-            
-            console.log(`Sent ${newsItems.length} news items to group ${groupJid}`);
-        } else {
-            console.log('No new news items found');
-        }
-
-    } catch (error) {
-        console.error('Error fetching news:', error);
-        if (!activeSubscriptions.has(groupJid)) return; // Don't send error if subscription was stopped
-
+        // Send the news message
         await conn.sendMessage(groupJid, {
-            text: '⚠️ පුවත් ලබා ගැනීමට නොහැකි විය. කරුණාකර පසුව නැවත උත්සාහ කරන්න.'
+            text: newsMessage
+        });
+
+        // Confirm message sent successfully
+        console.log('Test news sent to:', groupJid);
+        
+    } catch (error) {
+        console.error('Test function error:', error);
+        await conn.sendMessage(groupJid, {
+            text: '⚠️ Error testing news: ' + error.message
         });
     }
-}
-
-module.exports = {
-    // Export any functions or variables if needed
-};
+                        }
