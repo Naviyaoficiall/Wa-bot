@@ -9,7 +9,7 @@ const { cmd, commands } = require('../command');
 cmd({
   pattern: 'fb',
   alias: ["facebook"],
-  desc: "Download Facebook videos",
+  desc: "Download Facebook videos", 
   category: "download",
   filename: __filename
 }, async (conn, message, msg, { from, quoted, body, isCmd, command, args, q, isGroup, sender, senderNumber, botNumber2, botNumber, pushname, isMe, isOwner, groupMetadata, groupName, participants, groupAdmins, isBotAdmins, isAdmins, reply }) => {
