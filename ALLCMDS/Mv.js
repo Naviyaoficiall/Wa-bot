@@ -112,7 +112,7 @@ cmd({
                       mentionedJid: [],
                       externalAdReply: {
                         title: movieDetails.title,
-                        body: "Download by fredi md",
+                        body: "Download by senaya md",
                         mediaType: 1,
                         sourceUrl: selectedResult.link,
                         thumbnailUrl: movieDetails.image
