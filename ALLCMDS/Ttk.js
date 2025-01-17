@@ -1,4 +1,8 @@
 const axios = require('axios');
+const { cmd } = require('../command');
+
+
+
 
 cmd({
   pattern: "tiktokk",	
