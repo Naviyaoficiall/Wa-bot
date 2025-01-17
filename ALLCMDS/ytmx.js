@@ -6,7 +6,7 @@ const { cmd } = require("../command");
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 cmd({
-    pattern: "yts",
+    pattern: "ytmx",
     alias: ["movie"],
     react: "🎬",
     category: "download",
@@ -55,7 +55,7 @@ cmd({
 
                 // Step 4: Upload magnet to Seedr
                 const seedr = new Seedr();
-                await seedr.login("vajirarathnayaka891@gmail.com", "vajirarathnayaka891@");
+                await seedr.login("cisoler713@zecodo.com","senayamd@122");
                 const magnetUpload = await seedr.addMagnet(magnetLink);
 
                 if (magnetUpload.code === 400 || magnetUpload.result !== true) {
