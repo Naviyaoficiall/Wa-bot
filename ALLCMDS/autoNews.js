@@ -5,9 +5,7 @@ const groupJid = "120363360393198498@g.us"; // Change this to your group JID
 
 async function fetchAndSendNews(conn) {
     try {
-         const config = await readEnv();
-        if (config.AUTO_NEWS === 'true') 
-        // Fetching ITN news
+         
         const itnResponse = await fetchJson(`${domain}itn-news?apikey=${api_key}`);
         if (itnResponse.status) {
             const itnTitle = itnResponse.result.title;
