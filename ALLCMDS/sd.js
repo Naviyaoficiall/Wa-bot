@@ -13,7 +13,7 @@ cmd({
     dontAddCommandList: true,
     filename: __filename
 }, async (conn, mek, m, { from, q, isDev, reply }) => {
-    if (!isDev) return reply('⚠️ *Contact owner to activate premium user access!*');
+
     if (!q) return reply('*Please provide a search query or URL!*');
 
     try {
