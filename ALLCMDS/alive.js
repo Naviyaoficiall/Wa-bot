@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
 const cheerio = require('cheerio');
-const { cmd, commands } = require('../lib/functions');
+const { cmd, commands } = require('../command');
 const os = require('os');
 const { runtime } = require('../lib/functions');
 
@@ -32,7 +32,7 @@ cmd({
 ╰──────────────┈⊷
 > © ✦ QUENN X SENAYA MD ✦`;
 
-        await conn.sendMessage(from, { image: { url: imageUrl }, caption: message, contextInfo: { mentionedJid: [m.sender], forwardingScore: 1000, isForwarded: true, forwardedNewsletterMessageInfo: { newsletterJid: '120363284845910703@newsletter', newsletterName: 'RHODVICK TECH', serverMessageId: 143 } } }, { quoted: mek });
+        await conn.sendMessage(from, { image: { url: imageUrl }, caption: message, contextInfo: { mentionedJid: [m.sender], forwardingScore: 1000, isForwarded: true, forwardedNewsletterMessageInfo: { newsletterJid: '120363389254621003@newsletter', newsletterName: 'QUENN x SENAYA MD', serverMessageId: 143 } } }, { quoted: mek });
     } catch (error) {
         console.error('Error in alive command:', error);
         reply('An error occurred: ' + error.message);
