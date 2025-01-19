@@ -13,7 +13,7 @@ const { getBuffer, getGroupAdmins, getRandom, h2k, isUrl, Json, runtime, sleep, 
 
 //================================= BAISCOPE CMD ================================
 cmd({
-    pattern: "baiscope",
+    pattern: "b2",
     react: '📑',
     category: "search",
     desc: "pirate movie downloader",
