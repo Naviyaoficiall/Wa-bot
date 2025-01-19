@@ -9,7 +9,7 @@ const {cmd , commands} = require('../command')
 
 
 cmd({
-    pattern: "menu3",
+    pattern: "menu4",
     desc: "Download Song Menu",
     category: "Download",
     filename: __filename
