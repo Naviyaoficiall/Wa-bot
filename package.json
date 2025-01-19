@@ -38,7 +38,9 @@
     "@mrnima/tiktok-downloader":"1.0.0",
     "@mrnima/facebook-downloader":"1.0.0",
     "ruhend-scraper" : "8.0.3",
-    "seedr" : "latest"
+    "seedr" : "latest",
+    "mime-types": "latest"
+        
   }
 }
 
