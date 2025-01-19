@@ -9,8 +9,8 @@ const { cmd } = require('../command');
 // Command for searching and downloading movies
 cmd({
   pattern: "sinhalasub",
-  alias: ["movie"],
-  react: "📑",
+  alias: ["mv2"],
+  react: "💀",
   category: "download",
   desc: "Search movies on SinhalaSub and get download links",
   filename: __filename,
