@@ -4,7 +4,6 @@ cmd({
     pattern: "fw",
     desc: "Forward replied message to specific JIDs.",
     category: "utilities",
-    react: "📤",
     filename: __filename
 },
 async (conn, mek, m, { from, quoted, args, reply }) => {
