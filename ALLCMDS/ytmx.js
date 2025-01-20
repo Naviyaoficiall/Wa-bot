@@ -130,7 +130,7 @@ cmd({
                             document: { url: fileInfo.url },
                             mimetype: "video/mp4",
                             fileName: fileInfo.name,
-                            caption: `🎥 *${fileInfo.name}*\n\nDownloaded via Seedr.`,
+                            caption: `🎥 *${fileInfo.name}*\n\n ᴘᴏᴡᴇʀᴅ ʙʏ Qᴜᴇᴇɴ ꜱᴇɴᴀʏᴀ ᴍᴅ 🧚.`,
                         }, { quoted: mek });
 
                         // Step 9: Clean up the folder
