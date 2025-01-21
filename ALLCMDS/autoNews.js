@@ -1,4 +1,4 @@
-const { fetchJson } = require('../lib/functions');
+/*const { fetchJson } = require('../lib/functions');
 const domain = `https://manu-ofc-api-site-6bfcbe0e18f6.herokuapp.com/`
 const api_key =`Manul-Official-Key-3467`
 const groupJid = "120363360393198498@g.us"; // Change this to your group JID
