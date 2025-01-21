@@ -11,30 +11,24 @@ cmd({
     filename: __filename
 }, async (conn, mek, m, { from, q, reply }) => {
     try {
-        // Ensure the query parameter (movie name) is provided
         if (!q || q.trim() === "") {
             return reply("Please provide a movie name to search for Sinhala subtitles.");
         }
 
-        // Search URL for Cinesubz API
         const searchUrl = `https://www.dark-yasiya-api.site/movie/sinhalasub/search?text=${encodeURIComponent(q)}`;
         const response = await axios.get(searchUrl);
         const { result } = response.data;
 
-        // Check if results are found
         if (!result || result.data.length === 0) {
             return reply("Sorry, I couldn't find any Sinhala subtitles for the movie. Please check the title or try again later.");
         }
 
-        // Slice top 20 results and format them
         const topFilms = result.data.slice(0, 20);
         const filmsList = topFilms.map((film, index) => `${index + 1}. 🎬 *${film.title} (${film.year})*`).join("\n\n");
 
-        // Message to display movie options
         const msg = `🎥 *CineSubz Movie Search*\n\n🔍 *Search Results for:* *${q}*\n\n${filmsList}\n\n> Reply with a number to get details of a specific movie.`;
         const imageUrl = topFilms[0]?.image || 'https://i.ibb.co/K5JRNTJ/none-credit22.png';
 
-        // Send message with the list of films and image
         const sentMsg = await conn.sendMessage(from, {
             image: { url: imageUrl },
             caption: msg
@@ -42,7 +36,6 @@ cmd({
 
         const messageID = sentMsg.key.id;
 
-        // Handle user response for movie selection
         const handleUserResponse = async (messageUpdate) => {
             const mek = messageUpdate.messages[0];
             if (!mek.message) return;
@@ -51,7 +44,7 @@ cmd({
             const isReplyToSentMsg = mek.message.extendedTextMessage?.contextInfo.stanzaId === messageID;
 
             if (isReplyToSentMsg && /^[0-9]+$/.test(userReply)) {
-                const selectedIndex = parseInt(userReply) - 1; // User selects movie by number
+                const selectedIndex = parseInt(userReply) - 1;
                 if (selectedIndex < 0 || selectedIndex >= topFilms.length) {
                     return reply("Invalid selection. Please reply with a valid number.");
                 }
@@ -101,6 +94,12 @@ cmd({
                         const videoLink = [pp2, pp1, pp][videoIndex];
 
                         if (videoLink) {
+                            // Notify user that the movie is being downloaded
+                            await conn.sendMessage(from, {
+                                text: "🎥 Downloading Movie... Please wait."
+                            }, { quoted: mek });
+
+                            // Send the movie file
                             await conn.sendMessage(from, {
                                 document: { url: videoLink },
                                 mimetype: "video/mp4",
