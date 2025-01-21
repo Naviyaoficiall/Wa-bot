@@ -1,11 +1,10 @@
 const config = require('../config');
-const { cmd, commands } = require('../command');
-const { fetchJson, getBuffer, sleep, runtime, Json } = require('../lib/functions');
+const { cmd } = require('../command');
 const axios = require('axios');
 
 cmd({
     pattern: "ssub",
-    desc: "Search and show top Sinhala subtitles for films.",
+    desc: "Search Sinhala subtitles and download movies.",
     react: "🎬",
     category: "movie",
     filename: __filename
@@ -15,110 +14,106 @@ cmd({
             return reply("Please provide a movie name to search for Sinhala subtitles.");
         }
 
+        // Fetch movie search results
         const searchUrl = `https://www.dark-yasiya-api.site/movie/sinhalasub/search?text=${encodeURIComponent(q)}`;
-        const response = await axios.get(searchUrl);
-        const { result } = response.data;
+        const searchResponse = await axios.get(searchUrl);
+        const { result } = searchResponse.data;
 
         if (!result || result.data.length === 0) {
-            return reply("Sorry, I couldn't find any Sinhala subtitles for the movie. Please check the title or try again later.");
+            return reply("No Sinhala subtitles found for the given movie. Please try again with a different title.");
         }
 
-        const topFilms = result.data.slice(0, 20);
-        const filmsList = topFilms.map((film, index) => `${index + 1}. 🎬 *${film.title} (${film.year})*`).join("\n\n");
+        // Display top 20 movies
+        const topMovies = result.data.slice(0, 20);
+        const movieList = topMovies.map((movie, index) => `${index + 1}. 🎬 *${movie.title} (${movie.year || 'N/A'})*`).join("\n\n");
+        const searchMessage = `🎥 *CineSubz Search Results*\n\n🔍 *Results for:* "${q}"\n\n${movieList}\n\n> Reply with a number to get more details about a specific movie.`;
 
-        const msg = `🎥 *CineSubz Movie Search*\n\n🔍 *Search Results for:* *${q}*\n\n${filmsList}\n\n> Reply with a number to get details of a specific movie.`;
-        const imageUrl = topFilms[0]?.image || 'https://i.ibb.co/K5JRNTJ/none-credit22.png';
+        const imageUrl = topMovies[0]?.image || 'https://i.ibb.co/K5JRNTJ/none-credit22.png';
 
         const sentMsg = await conn.sendMessage(from, {
             image: { url: imageUrl },
-            caption: msg
+            caption: searchMessage
         }, { quoted: mek });
 
-        const messageID = sentMsg.key.id;
+        const sentMessageId = sentMsg.key.id;
 
-        const handleUserResponse = async (messageUpdate) => {
-            const mek = messageUpdate.messages[0];
-            if (!mek.message) return;
+        // Handle user reply for movie details
+        const handleMovieDetails = async (messageUpdate) => {
+            const userMessage = messageUpdate.messages[0];
+            if (!userMessage.message) return;
 
-            const userReply = mek.message.conversation || mek.message.extendedTextMessage?.text;
-            const isReplyToSentMsg = mek.message.extendedTextMessage?.contextInfo.stanzaId === messageID;
+            const userReply = userMessage.message.conversation || userMessage.message.extendedTextMessage?.text;
+            const isReplyToSearch = userMessage.message.extendedTextMessage?.contextInfo.stanzaId === sentMessageId;
 
-            if (isReplyToSentMsg && /^[0-9]+$/.test(userReply)) {
+            if (isReplyToSearch && /^[0-9]+$/.test(userReply)) {
                 const selectedIndex = parseInt(userReply) - 1;
-                if (selectedIndex < 0 || selectedIndex >= topFilms.length) {
+                if (selectedIndex < 0 || selectedIndex >= topMovies.length) {
                     return reply("Invalid selection. Please reply with a valid number.");
                 }
 
-                const selectedFilm = topFilms[selectedIndex];
-                const detailResponse = await axios.get(`https://www.dark-yasiya-api.site/movie/sinhalasub/movie?url=${selectedFilm.link}`);
+                const selectedMovie = topMovies[selectedIndex];
+                const detailUrl = `https://www.dark-yasiya-api.site/movie/sinhalasub/movie?url=${encodeURIComponent(selectedMovie.link)}`;
+                const detailResponse = await axios.get(detailUrl);
                 const movieDetails = detailResponse.data.result.data;
 
                 if (!movieDetails || !movieDetails.dl_links || movieDetails.dl_links.length < 3) {
-                    return reply("Sorry, download links for the movie are not available.");
+                    return reply("Download links for the selected movie are not available.");
                 }
 
-                const quality = movieDetails.dl_links[0]?.link;
-                const quality1 = movieDetails.dl_links[1]?.link;
-                const quality2 = movieDetails.dl_links[2]?.link;
+                const qualities = movieDetails.dl_links.map((link, index) => ({
+                    quality: link.quality || ['HDRip 1080p', 'HDRip 720p', 'HDRip 480p'][index],
+                    url: link.link.replace('/u/', '/api/file/') + "?download"
+                }));
 
-                let pp = quality ? quality.replace('/u/', '/api/file/') + "?download" : null;
-                let pp1 = quality1 ? quality1.replace('/u/', '/api/file/') + "?download" : null;
-                let pp2 = quality2 ? quality2.replace('/u/', '/api/file/') + "?download" : null;
-
-                const detailedMsg = `🎥 ᴀᴘᴇx ᴄɪɴᴇᴍᴀ 🎬
-
-*☘️ Title:* ${movieDetails.title || 'N/A'} 
-*📆 Release:* ${movieDetails.date || 'N/A'}
-*🌎 Country:* ${movieDetails.country || 'N/A'}
-*⏰ Runtime:* ${movieDetails.runtime || 'N/A'}
-
-> Reply with:
-*3* - HDRip 480p
-*4* - HDRip 720p
-*5* - HDRip 1080p`;
+                const detailMessage = `🎥 *${movieDetails.title || 'N/A'}*\n\n` +
+                    `*📆 Release:* ${movieDetails.date || 'N/A'}\n` +
+                    `*🌎 Country:* ${movieDetails.country || 'N/A'}\n` +
+                    `*⏰ Runtime:* ${movieDetails.runtime || 'N/A'}\n\n` +
+                    `> Reply with:\n` +
+                    `*1* - ${qualities[0]?.quality || '1080p'}\n` +
+                    `*2* - ${qualities[1]?.quality || '720p'}\n` +
+                    `*3* - ${qualities[2]?.quality || '480p'}`;
 
                 const sentDetailMsg = await conn.sendMessage(from, {
                     image: { url: movieDetails.images[0] || 'https://i.ibb.co/K5JRNTJ/none-credit22.png' },
-                    caption: detailedMsg
+                    caption: detailMessage
                 }, { quoted: mek });
 
-                const handleDetailResponse = async (messageUpdate) => {
-                    const mek = messageUpdate.messages[0];
-                    if (!mek.message) return;
+                const handleDownloadRequest = async (downloadUpdate) => {
+                    const downloadMessage = downloadUpdate.messages[0];
+                    if (!downloadMessage.message) return;
 
-                    const userReply = mek.message.conversation || mek.message.extendedTextMessage?.text;
-                    const isReplyToSentMsg = mek.message.extendedTextMessage?.contextInfo.stanzaId === sentDetailMsg.key.id;
+                    const userDownloadReply = downloadMessage.message.conversation || downloadMessage.message.extendedTextMessage?.text;
+                    const isReplyToDetails = downloadMessage.message.extendedTextMessage?.contextInfo.stanzaId === sentDetailMsg.key.id;
 
-                    if (isReplyToSentMsg) {
-                        const videoIndex = userReply === '3' ? 2 : userReply === '4' ? 1 : userReply === '5' ? 0 : null;
-                        const videoLink = [pp2, pp1, pp][videoIndex];
+                    if (isReplyToDetails && /^[1-3]$/.test(userDownloadReply)) {
+                        const selectedQuality = parseInt(userDownloadReply) - 1;
+                        const selectedLink = qualities[selectedQuality]?.url;
 
-                        if (videoLink) {
-                            // Notify user that the movie is being downloaded
+                        if (selectedLink) {
                             await conn.sendMessage(from, {
-                                text: "🎥 Downloading Movie... Please wait."
-                            }, { quoted: mek });
+                                text: "🎥 Downloading your movie... Please wait."
+                            }, { quoted: downloadMessage });
 
-                            // Send the movie file
                             await conn.sendMessage(from, {
-                                document: { url: videoLink },
+                                document: { url: selectedLink },
                                 mimetype: "video/mp4",
-                                fileName: `${movieDetails.title} (${userReply === '3' ? '480p' : userReply === '4' ? '720p' : '1080p'}).mkv`
-                            }, { quoted: mek });
+                                fileName: `${movieDetails.title || 'Movie'} (${qualities[selectedQuality]?.quality || 'N/A'}).mkv`
+                            }, { quoted: downloadMessage });
                         } else {
-                            reply("Invalid option or no download link available.");
+                            reply("Invalid quality selection or no download link available.");
                         }
                     }
                 };
 
                 conn.ev.removeAllListeners('messages.upsert');
-                conn.ev.on('messages.upsert', handleDetailResponse);
+                conn.ev.on('messages.upsert', handleDownloadRequest);
             }
         };
 
-        conn.ev.on('messages.upsert', handleUserResponse);
-    } catch (e) {
-        console.error(e);
-        reply(`An error occurred: ${e.message || e}`);
+        conn.ev.on('messages.upsert', handleMovieDetails);
+    } catch (error) {
+        console.error(error);
+        reply(`An error occurred: ${error.message || 'Please try again later.'}`);
     }
 });
