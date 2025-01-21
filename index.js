@@ -22,7 +22,7 @@ const { File } = require('megajs')
 const process = require('process') 
 
 
-const autoNews = require('./ALLCMDS/autoNews')
+//const autoNews = require('./ALLCMDS/autoNews')
 
 const ownerNumber = ['94764038550']
 
@@ -86,7 +86,7 @@ console.log('Bot connected ✅🎊')
 let up = `NAVIYA-MD connected successful ✅\n\nPREFIX: ${prefix}`;
 
 conn.sendMessage(ownerNumber + "@s.whatsapp.net", { image: { url: `https://telegra.ph/file/900435c6d3157c98c3c88.jpg` }, caption: up })
-autoNews(conn);
+//autoNews(conn);
 }
 })
 conn.ev.on('creds.update', saveCreds)  
