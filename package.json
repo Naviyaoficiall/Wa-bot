@@ -39,7 +39,9 @@
     "@mrnima/facebook-downloader":"1.0.0",
     "ruhend-scraper" : "8.0.3",
     "seedr" : "latest",
-    "mime-types": "latest"
+    "mime-types": "latest",
+    "axios-cookiejar-support":"5.0.5",
+    "tough-cookie":"5.1.0"
         
   }
 }
