@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 
 cmd({
-    pattern: 'baiscope',
+    pattern: 'bs6',
     react: '🎬',
     category: 'download',
     desc: 'Search movies on baiscope.lk and get download links',
