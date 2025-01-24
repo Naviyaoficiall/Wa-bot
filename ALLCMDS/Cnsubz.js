@@ -3,7 +3,7 @@ const { cmd } = require('../command');
 
 cmd({
     pattern: 'cinesubz',
-    react: '🧚',
+    react: '🎬',
     category: 'search',
     desc: 'Search and fetch Cinesubz movie details',
     filename: __filename
@@ -21,21 +21,22 @@ cmd({
         // Make API Request
         const searchResponse = await axios.get(SEARCH_API);
 
-        // Validate response
-        if (!searchResponse.data || typeof searchResponse.data !== 'object') {
-            return await reply('*Invalid API response. Please try again later.*');
-        }
+        // Log response for debugging
+        console.log('API Response:', searchResponse.data);
 
-        // Check if data exists
-        const results = Array.isArray(searchResponse.data) ? searchResponse.data : [searchResponse.data];
-        if (results.length === 0) {
+        // Check and process the response data
+        if (!Array.isArray(searchResponse.data) || searchResponse.data.length === 0) {
             return await reply('*No results found for:* ' + q);
         }
 
         // Parse and format search results
         let responseText = `🎬 *Search Results for:* _${q}_\n\n`;
-        results.slice(0, 5).forEach((movie, index) => {
-            responseText += `*${index + 1}.* ${movie.title}\n🔗 Info: ${movie.info}\n⬇️ Download: ${movie.download}\n\n`;
+        searchResponse.data.slice(0, 5).forEach((movie, index) => {
+            const title = movie.title || 'N/A';
+            const infoLink = movie.info || 'N/A';
+            const downloadLink = movie.download || 'N/A';
+
+            responseText += `*${index + 1}.* ${title}\n🔗 Info: ${infoLink}\n⬇️ Download: ${downloadLink}\n\n`;
         });
 
         // Send results to the user
