@@ -1,71 +1,52 @@
 const axios = require('axios');
-const { cmd, commands } = require('../command');
+const { cmd } = require('../command');
 
 cmd({
-    'pattern': 'cinesubz',
-    'react': '🎥',
-    'category': 'download',
-    'desc': 'Search movies, get movie info, and download links from Cinesubz using the free API',
-    'filename': __filename
+    pattern: 'cinesubz',
+    react: '🎬',
+    category: 'search',
+    desc: 'Search and fetch Cinesubz movie details',
+    filename: __filename
 }, async (bot, message, args, details) => {
     const { from, q, reply } = details;
+
+    // API Key and Endpoint
     const API_KEY = 'pramashi01';
+    const SEARCH_API = `https://darksadas-yt-cinezsub-search.vercel.app/?query=${encodeURIComponent(q)}&apikey=${API_KEY}`;
 
     try {
-        if (!q) return await reply('Please provide a search query!\n\nExample: *!cinesubz Avatar*');
+        // Ensure search query is provided
+        if (!q) return await reply('*Please provide a search query!*');
 
-        // Search movies
-        const searchUrl = `https://darksadas-yt-cinezsub-search.vercel.app/?query=${encodeURIComponent(q)}&apikey=${API_KEY}`;
-        const searchResponse = await axios.get(searchUrl);
+        // Make API Request
+        const searchResponse = await axios.get(SEARCH_API);
 
+        // Check if data exists
         if (!searchResponse.data || searchResponse.data.length === 0) {
-            return await reply('No results found for your search query!');
+            return await reply('*No results found for:* ' + q);
         }
 
+        // Parse and format search results
         const results = searchResponse.data.slice(0, 5); // Limit to 5 results
-        let responseText = `*🎥 Cinesubz Search Results for:* _${q}_\n\n`;
-
+        let responseText = `🎬 *Search Results for:* _${q}_\n\n`;
         results.forEach((movie, index) => {
-            responseText += `*${index + 1}.* ${movie.title}\n🔗 Link: ${movie.url}\n\n`;
+            responseText += `*${index + 1}.* ${movie.title}\n🔗 Info: ${movie.info}\n⬇️ Download: ${movie.download}\n\n`;
         });
 
-        responseText += 'Reply with the number of the movie to get more info.';
+        // Send results to the user
+        await reply(responseText);
 
-        const sentMessage = await bot.sendMessage(from, { text: responseText }, { quoted: message });
-        const sentMessageId = sentMessage.key.id;
-
-        // Listen for user reply
-        bot.ev.on('messages.upsert', async upsert => {
-            const incomingMessage = upsert.messages[0];
-            if (!incomingMessage.message) return;
-
-            const text = incomingMessage.message.conversation || incomingMessage.message.extendedTextMessage?.text;
-            const isReplyToSentMessage = incomingMessage.messageContextInfo?.stanzaId === sentMessageId;
-
-            if (isReplyToSentMessage) {
-                const selectedNumber = parseInt(text.trim());
-                if (!isNaN(selectedNumber) && selectedNumber > 0 && selectedNumber <= results.length) {
-                    const selectedMovie = results[selectedNumber - 1];
-
-                    // Fetch movie info
-                    const infoUrl = `https://darksadas-yt-cineszub-info.vercel.app/?url=${encodeURIComponent(selectedMovie.url)}&apikey=${API_KEY}`;
-                    const infoResponse = await axios.get(infoUrl);
-
-                    if (infoResponse.data) {
-                        const movieInfo = infoResponse.data;
-                        let infoText = `*🎬 ${movieInfo.title}*\n\n*🎭 Genres:* ${movieInfo.genres || 'N/A'}\n*📅 Released:* ${movieInfo.release || 'N/A'}\n*📜 Description:* ${movieInfo.description || 'N/A'}\n\n*🔗 Download Link:*\n${movieInfo.download || 'N/A'}`;
-
-                        await bot.sendMessage(from, { text: infoText }, { quoted: incomingMessage });
-                    } else {
-                        await reply('*Error fetching movie info. Please try again.*');
-                    }
-                } else {
-                    await reply('*Invalid selection. Please reply with a valid number.*');
-                }
-            }
-        });
     } catch (error) {
-        console.error(error);
-        await reply('*Error occurred while processing your request. Please try again later.*');
+        console.error('Cinesubz Plugin Error:', error.response?.data || error.message);
+
+        if (error.response?.status === 403) {
+            await reply('*Error:* Forbidden (403). Please check the API key.');
+        } else if (error.response?.status === 404) {
+            await reply('*Error:* Not Found (404). The requested resource could not be found.');
+        } else if (error.response?.status === 500) {
+            await reply('*Error:* Server Error (500). Please try again later.');
+        } else {
+            await reply('*Error occurred while processing your request. Please try again later.*');
+        }
     }
 });
