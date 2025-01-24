@@ -19,27 +19,31 @@ cmd({
         if (!q) return await reply('*Please provide a search query!*');
 
         // Make API Request
-        const searchResponse = await axios.get(SEARCH_API);
+        const response = await axios.get(SEARCH_API);
 
-        // Log response for debugging
-        console.log('API Response:', searchResponse.data);
+        // Log API Response
+        console.log('API Response:', response.data);
 
-        // Check and process the response data
-        if (!Array.isArray(searchResponse.data) || searchResponse.data.length === 0) {
-            return await reply('*No results found for:* ' + q);
+        // Check if status is true and data exists
+        if (!response.data.status || !Array.isArray(response.data.data) || response.data.data.length === 0) {
+            return await reply(`*No results found for:* ${q}`);
         }
 
-        // Parse and format search results
-        let responseText = `🎬 *Search Results for:* _${q}_\n\n`;
-        searchResponse.data.slice(0, 5).forEach((movie, index) => {
-            const title = movie.title || 'N/A';
-            const infoLink = movie.info || 'N/A';
-            const downloadLink = movie.download || 'N/A';
+        // Extract movie data
+        const movieData = response.data.data;
 
-            responseText += `*${index + 1}.* ${title}\n🔗 Info: ${infoLink}\n⬇️ Download: ${downloadLink}\n\n`;
+        // Format and send results
+        let responseText = `🎬 *Search Results for:* _${q}_\n\n`;
+        movieData.slice(0, 5).forEach((movie, index) => {
+            const title = movie.title || 'N/A';
+            const imdb = movie.imdb || 'N/A';
+            const year = movie.year || 'N/A';
+            const link = movie.link || 'N/A';
+            const shortDesc = movie.short_desc || 'N/A';
+
+            responseText += `*${index + 1}.* ${title}\n📆 Year: ${year}\n⭐ IMDb: ${imdb}\n🔗 Link: ${link}\n📝 Description: ${shortDesc}\n\n`;
         });
 
-        // Send results to the user
         await reply(responseText);
 
     } catch (error) {
