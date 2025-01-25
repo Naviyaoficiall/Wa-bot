@@ -40,7 +40,7 @@ cmd({
     formData.append("image", fs.createReadStream(tempImagePath));
 
     // Send image to imgbb
-    const response = await axios.post("https://api.imgbb.com/1/upload?key=06d00f0e4520243a32b58138765a2ecc", formData, {
+    const response = await axios.post("https://api.imgbb.com/1/upload?key=97e6e1853e3a631fd261c720d6cdfc1e", formData, {
       'headers': {
         ...formData.getHeaders()
       }
