@@ -4,7 +4,7 @@ const { cmd } = require("../command");
 
 cmd({
   pattern: "cinesubz",
-  alias: ["cs"],
+  alias: ["cs3"],
   react: "🎬",
   category: "download",
   desc: "Search movies on CineSubz and get download links",
