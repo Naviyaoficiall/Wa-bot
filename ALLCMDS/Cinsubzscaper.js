@@ -4,91 +4,140 @@ const cheerio = require('cheerio');
 const { cmd } = require('../command');
 
 cmd({
-    pattern: "cinsubz4",
-    alias: ['films', 'film'],
+    pattern: ".cinsubz4",
+    alias: ['mv3'],
+    react: '🎬',
     category: "download",
-    desc: "Search Sinhala Sub Movies and Download",
+    desc: "Search movies on CineSubz and get download links",
     filename: __filename
 }, async (conn, message, msg, { from, q, reply }) => {
     try {
-        if (!q) return await reply("*Please provide a movie name to search!*");
+        if (!q) {
+            return await reply("*Please provide a movie name! (e.g., Deadpool)*");
+        }
 
-        let searchResults = await searchMovies(q);
-        if (searchResults.length === 0) return await reply("*No results found!*");
+        // Scraping CineSubz search results
+        const searchUrl = `https://cinesubz.co/?s=${encodeURIComponent(q)}`;
+        const browser = await puppeteer.launch({
+            headless: true,
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
+        });
 
-        let resultMessage = "🎬 *Search Results for:* _" + q + "_\n\n";
-        searchResults.forEach((result, index) => {
+        const page = await browser.newPage();
+        await page.goto(searchUrl, { waitUntil: 'domcontentloaded' });
+
+        const searchResults = await page.evaluate(() => {
+            let results = [];
+            document.querySelectorAll(".post-title.entry-title").forEach((el) => {
+                const title = el.innerText;
+                const link = el.querySelector("a").href;
+                results.push({ title, link });
+            });
+            return results;
+        });
+
+        await browser.close();
+
+        if (!searchResults.length) {
+            return await reply(`*No results found for:* ${q}`);
+        }
+
+        // Creating the search results message
+        let resultMessage = `🎬 *Search Results for:* _${q}_\n\n`;
+        searchResults.slice(0, 5).forEach((result, index) => {
             resultMessage += `*${index + 1}.* ${result.title}\n🔗 Link: ${result.link}\n\n`;
         });
 
-        let sentMessage = await conn.sendMessage(from, { text: resultMessage }, { quoted: message });
+        const sentMessage = await conn.sendMessage(from, { text: resultMessage }, { quoted: message });
 
-        conn.ev.on("messages.upsert", async msgUpdate => {
-            let newMsg = msgUpdate.messages[0];
+        const messageId = sentMessage.key.id;
+
+        // Handling User Response for Download
+        conn.ev.on('messages.upsert', async msgUpdate => {
+            const newMsg = msgUpdate.messages[0];
             if (!newMsg.message) return;
-            
-            let userText = newMsg.message.conversation || newMsg.message.extendedTextMessage?.text;
-            let isReplyToBot = newMsg.message.extendedTextMessage && newMsg.message.extendedTextMessage.contextInfo.stanzaId === sentMessage.key.id;
+
+            const userText = newMsg.message.conversation || newMsg.message.extendedTextMessage?.text;
+            const isReplyToBot = newMsg.message.extendedTextMessage && newMsg.message.extendedTextMessage.contextInfo.stanzaId === messageId;
 
             if (isReplyToBot) {
-                let selectedIndex = parseInt(userText.trim());
-                if (isNaN(selectedIndex) || selectedIndex < 1 || selectedIndex > searchResults.length) {
-                    return await reply("*Invalid selection. Please reply with a valid number.*");
+                const selectedNumber = parseInt(userText.trim());
+                if (!isNaN(selectedNumber) && selectedNumber > 0 && selectedNumber <= searchResults.length) {
+                    const selectedMovie = searchResults[selectedNumber - 1];
+
+                    const movieResponse = await axios.get(selectedMovie.link);
+                    const $ = cheerio.load(movieResponse.data);
+
+                    let downloadLinks = [];
+                    $("a").each((_, element) => {
+                        const link = $(element).attr("href");
+                        if (link && link.includes("pixeldrain.com")) {
+                            downloadLinks.push(link);
+                        }
+                    });
+
+                    if (!downloadLinks.length) {
+                        return await reply("No PixelDrain download links found.");
+                    }
+
+                    let downloadMessage = `🎥 *${selectedMovie.title}*\n\n`;
+                    downloadMessage += "*Available Download Links:*\n";
+                    downloadLinks.forEach((link, index) => {
+                        downloadMessage += `*${index + 1}.* 🔗 Link: ${link}\n\n`;
+                    });
+
+                    const sentDownloadMessage = await conn.sendMessage(from, { text: downloadMessage }, { quoted: newMsg });
+
+                    const downloadMessageId = sentDownloadMessage.key.id;
+
+                    // Handling User Response for Final Download
+                    conn.ev.on("messages.upsert", async downloadMsgUpdate => {
+                        const downloadMsg = downloadMsgUpdate.messages[0];
+                        if (!downloadMsg.message) return;
+
+                        const downloadText = downloadMsg.message.conversation || downloadMsg.message.extendedTextMessage?.text;
+                        const isReplyToDownloadMessage = downloadMsg.message.extendedTextMessage && downloadMsg.message.extendedTextMessage.contextInfo.stanzaId === downloadMessageId;
+
+                        if (isReplyToDownloadMessage) {
+                            const downloadNumber = parseInt(downloadText.trim());
+                            if (!isNaN(downloadNumber) && downloadNumber > 0 && downloadNumber <= downloadLinks.length) {
+                                const selectedLink = downloadLinks[downloadNumber - 1];
+                                const fileId = selectedLink.split('/').pop();
+
+                                await conn.sendMessage(from, { react: { text: '⬇️', key: message.key } });
+
+                                const downloadUrl = `https://pixeldrain.com/api/file/${fileId}`;
+                                await conn.sendMessage(from, { react: { text: '⬆', key: message.key } });
+
+                                await conn.sendMessage(from, {
+                                    document: { url: downloadUrl },
+                                    mimetype: "video/mp4",
+                                    fileName: `${selectedMovie.title}.mp4`,
+                                    caption: `${selectedMovie.title}\nQuality: HD\nDownloaded via Naviya MD`,
+                                    contextInfo: {
+                                        externalAdReply: {
+                                            title: selectedMovie.title,
+                                            body: "Download from CineSubz",
+                                            mediaType: 1,
+                                            sourceUrl: selectedMovie.link,
+                                            thumbnailUrl: "https://cinesubz.co/wp-content/uploads/2023/04/CineSubz.png"
+                                        }
+                                    }
+                                }, { quoted: downloadMsg });
+
+                                await conn.sendMessage(from, { react: { text: '✅', key: message.key } });
+                            } else {
+                                await reply("Invalid selection. Please reply with a valid number.");
+                            }
+                        }
+                    });
+                } else {
+                    await reply("Invalid selection. Please reply with a valid number.");
                 }
-
-                let selectedMovie = searchResults[selectedIndex - 1];
-                let movieDetails = await getMovieInfo(selectedMovie.link);
-
-                let detailsMessage = `🎬 *${movieDetails.title}*\n\n📄 *Description:* ${movieDetails.description}\n📥 *Download:* [Click Here](${movieDetails.downloadLink})`;
-
-                await conn.sendMessage(from, {
-                    text: detailsMessage,
-                    image: { url: movieDetails.image }
-                }, { quoted: newMsg });
             }
         });
-
     } catch (error) {
-        console.error("Error:", error);
-        await reply("*An error occurred while searching for the movie!*");
+        console.error("Error during search:", error);
+        reply("*An error occurred while searching!*");
     }
 });
-
-// Search Movies Function
-async function searchMovies(query) {
-    const searchUrl = `https://cinesubz.co/?s=${encodeURIComponent(query)}`;
-    const browser = await puppeteer.launch({ headless: true });
-    const page = await browser.newPage();
-
-    await page.goto(searchUrl, { waitUntil: 'load' });
-    const html = await page.content();
-    const $ = cheerio.load(html);
-    
-    let results = [];
-    $('.post-title').each((index, element) => {
-        let title = $(element).text().trim();
-        let link = $(element).find('a').attr('href');
-        results.push({ title, link });
-    });
-
-    await browser.close();
-    return results;
-}
-
-// Get Movie Info Function
-async function getMovieInfo(movieUrl) {
-    const browser = await puppeteer.launch({ headless: true });
-    const page = await browser.newPage();
-
-    await page.goto(movieUrl, { waitUntil: 'load' });
-    const html = await page.content();
-    const $ = cheerio.load(html);
-
-    let title = $('.post-title').text().trim();
-    let image = $('.attachment-post-thumbnail').attr('src');
-    let description = $('.post-content p').first().text();
-    let downloadLink = $('.wp-block-button a').attr('href');
-
-    await browser.close();
-    return { title, image, description, downloadLink };
-          }
