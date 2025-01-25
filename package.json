@@ -4,6 +4,8 @@
   "description": "A WhatsApp bot created using Node.js",
   "main": "index.js",
   "scripts": {
+    "postinstall": "apt-get update && apt-get install -y libnss3"
+  },
     "start": "pm2 start index.js --deep-monitoring --attach --name NAVIYA-MD",
     "stop": "pm2 stop NAVIYA-MD",
     "restart": "pm2 restart NAVIYA-MD"
