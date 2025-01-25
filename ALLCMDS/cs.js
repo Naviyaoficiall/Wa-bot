@@ -7,7 +7,7 @@ const API_KEY = "pramashi01";
 cmd({
   pattern: "cinesubz",
   alias: ["css"],
-  react: "💚",
+  react: "🤕",
   category: "download",
   desc: "Download full movies from Cinesubz and send on WhatsApp",
   filename: __filename,
@@ -18,9 +18,12 @@ cmd({
     // 🔍 **Search movies on Cinesubz**
     const searchUrl = `https://darksadas-yt-cinezsub-search.vercel.app/?query=${encodeURIComponent(q)}&apikey=${API_KEY}`;
     const searchRes = await axios.get(searchUrl);
-    const movies = searchRes.data.result.slice(0, 10);
 
-    if (!movies.length) return await reply("No results found for: " + q);
+    if (!searchRes.data || !searchRes.data.result || searchRes.data.result.length === 0) {
+      return await reply("⚠️ No movies found for: " + q);
+    }
+
+    const movies = searchRes.data.result.slice(0, 10);
 
     // 📜 **Display Search Results**
     let searchMessage = "📽️ *Search Results for* \"" + q + "\":\n\n";
@@ -47,11 +50,21 @@ cmd({
           // 📜 **Fetch Movie Details**
           const movieInfoUrl = `https://darksadas-yt-cineszub-info.vercel.app/?url=${encodeURIComponent(selectedMovie.link)}&apikey=${API_KEY}`;
           const movieInfoRes = await axios.get(movieInfoUrl);
+
+          if (!movieInfoRes.data || !movieInfoRes.data.result) {
+            return await reply("⚠️ Movie details not available.");
+          }
+
           const movieDetails = movieInfoRes.data.result;
 
           // 📥 **Get Download Link**
           const dlUrl = `https://darksadas-yt-cinezsub-dl.vercel.app/?url=${encodeURIComponent(selectedMovie.link)}&apikey=${API_KEY}`;
           const dlRes = await axios.get(dlUrl);
+
+          if (!dlRes.data || !dlRes.data.result || !dlRes.data.result.link) {
+            return await reply("⚠️ No download link available.");
+          }
+
           const downloadLink = dlRes.data.result.link;
 
           // **Send downloading reaction**
@@ -92,12 +105,12 @@ cmd({
             fs.unlinkSync(movieFile);
           });
         } else {
-          await reply("Invalid selection. Please reply with a valid number.");
+          await reply("⚠️ Invalid selection. Please reply with a valid number.");
         }
       }
     });
   } catch (error) {
     console.error("Error fetching movie details:", error);
-    await reply("An error occurred while downloading the movie. Please try again.");
+    await reply("❌ An error occurred while processing your request. Please try again.");
   }
 });
