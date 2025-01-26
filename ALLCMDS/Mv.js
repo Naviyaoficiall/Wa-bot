@@ -3,7 +3,7 @@ const axios = require('axios');
 const { cmd } = require('../command');
 
 cmd({
-  pattern: "sinhalasub",
+  pattern: "sinhalasub", 
   alias: ['mv'],
   react: '📑',
   category: "download",
