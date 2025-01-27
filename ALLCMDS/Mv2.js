@@ -1,12 +1,14 @@
 const { sinhalaSub } = require("mrnima-moviedl");
 const axios = require('axios');
 const { cmd } = require('../command');
-const fetch = require('node-fetch'); // Thumbnail එක download කරන්න
+
+// 🛠 Fix: Import node-fetch dynamically
+const fetch = (...args) => import('node-fetch').then(({default: fetch}) => fetch(...args));
 
 cmd({
   pattern: "sinhalasub",
   alias: ['mv5'],
-  react: '🧚',
+  react: '📑',
   category: "download",
   desc: "Search movies on sinhalasub and get download links",
   filename: __filename
@@ -81,7 +83,8 @@ cmd({
                   await conn.sendMessage(from, { react: { text: '⬆', key: message.key } });
 
                   // 🔥 Fetch thumbnail image
-                  const thumbnailBuffer = await (await fetch(movieDetails.image)).buffer();
+                  const response = await fetch(movieDetails.image);
+                  const thumbnailBuffer = await response.buffer();
 
                   await conn.sendMessage(from, {
                     document: { url: downloadUrl },
