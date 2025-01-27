@@ -58,7 +58,6 @@ cmd({
             detailsMessage += `🧿 *Release Date:* ${movieDetails.release_date}\n`;
             detailsMessage += `🌍 *Country:* ${movieDetails.country}\n`;
             detailsMessage += `⏱️ *Duration:* ${movieDetails.duration}\n`;
-            detailsMessage += `🎀 *Categories:* ${movieDetails.categories.join(", ")}\n`;
             detailsMessage += `⭐ *IMDB:* ${movieDetails.imdb}\n`;
             detailsMessage += `🤵‍♂️ *Director:* ${movieDetails.director}\n`;
             detailsMessage += `💃 *Follow us ➢* https://whatsapp.com/channel/0029VaaPfFK7Noa8nI8zGg27`;
