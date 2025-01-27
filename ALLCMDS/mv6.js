@@ -61,7 +61,6 @@ cmd({
             detailsMessage += `🎀 *Categories:* ${movieDetails.categories.join(", ")}\n`;
             detailsMessage += `⭐ *IMDB:* ${movieDetails.imdb}\n`;
             detailsMessage += `🤵‍♂️ *Director:* ${movieDetails.director}\n`;
-            detailsMessage += `🕵️‍♂️ *Cast:* ${movieDetails.cast.join(", ")}\n\n`;
             detailsMessage += `💃 *Follow us ➢* https://whatsapp.com/channel/0029VaaPfFK7Noa8nI8zGg27`;
 
             await conn.sendMessage(from, {
