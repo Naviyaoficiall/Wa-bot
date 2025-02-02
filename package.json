@@ -42,7 +42,9 @@
     "mime-types": "latest",
     "axios-cookiejar-support":"5.0.5",
     "tough-cookie":"5.1.0",
-    "puppeteer-core": "^21.0.0"
+    "puppeteer-core": "^21.0.0",
+    "@sl-code-lords/movie-api":"1.0.0",
+    "pixaldrain-sinhalasub": "git+https://github.com/DarkMakerofc/pixaldrain-sinhalasub.git" 
         
   }
 }
