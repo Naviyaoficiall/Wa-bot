@@ -19,8 +19,8 @@ cmd({
   category: "media",
   use: ".firemovie <movie name>",
   filename: __filename
-}, async (msg, chat, args, { from, reply, args, q }) => {
-  try {
+}, async (conn, mek, m, { from, reply, args, q }) => {
+    try {
     if (!q) {
       return await reply("\n*🎬 SUPUN FIRE MOVIE SEARCH*\n\nUsage: .firemovie <movie name>\n\nExamples:\n.firemovie Iron Man\n.firemovie Avengers\n.firemovie Spider-Man\n\n*Tips:*\n- Be specific with movie name\n- Use full movie titles");
     }
