@@ -4,7 +4,6 @@ const { delay } = require('../lib/functions'); // Delay function for simulation
 cmd({
     pattern: "fakereact",
     alias: ["fr"],
-    react: "🎭",
     category: "fun",
     desc: "Send fake reactions to a WhatsApp channel",
     filename: __filename
@@ -12,7 +11,7 @@ cmd({
     try {
         // Check if the command is properly formatted
         if (!args[0] || !args[1]) {
-            return reply("*❌ Please provide a WhatsApp channel link and the number of reactions!*\nExample: `.fakereact https://whatsapp.com/channel/12345 50`");
+            return reply("*❌ Please provide a WhatsApp channel link and the number of reactions!*\nExample: `.fr https://whatsapp.com/channel/0029VaxwOyB2v1IscQP8Ko2F/107 50`");
         }
 
         const channelLink = args[0]; // WhatsApp channel link
